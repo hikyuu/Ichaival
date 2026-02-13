@@ -30,6 +30,27 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Generate self-signed keystore
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE_PATH="$RUNNER_TEMP/ichaival-release.jks"
+          keytool -genkeypair \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass android \
+            -alias ichaival \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 36500 \
+            -dname "CN=Ichaival, OU=CI, O=Ichaival, L=NA, S=NA, C=CN"
+          cat > keystore.properties <<EOF
+          keyAlias=ichaival
+          keyPassword=android
+          storeFile=$KEYSTORE_PATH
+          storePassword=android
+          EOF
+
       - name: Build release APKs (multi-arch)
         run: ./gradlew app:assembleRelease -PenableAbiSplits=true
 
