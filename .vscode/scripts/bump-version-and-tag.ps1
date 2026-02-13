@@ -65,7 +65,8 @@ $updated = [regex]::Replace(
     1
 )
 
-Set-Content -Path $buildGradlePath -Value $updated -Encoding UTF8
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($buildGradlePath, $updated, $utf8NoBom)
 
 & git add 'app/build.gradle'
 if ($LASTEXITCODE -ne 0) {
