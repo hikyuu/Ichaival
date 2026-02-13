@@ -52,6 +52,17 @@ android {
         }
     }
 
+    if (project.hasProperty("enableAbiSplits") && project.property("enableAbiSplits").toString().toBoolean()) {
+        splits {
+            abi {
+                enable true
+                reset()
+                include 'armeabi-v7a', 'arm64-v8a'
+                universalApk false
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = 17
         targetCompatibility = 17

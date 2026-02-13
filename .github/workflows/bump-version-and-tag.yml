@@ -1,0 +1,106 @@
+name: Bump Version And Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 选择版本递增类型
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+permissions:
+  contents: write
+
+jobs:
+  bump-and-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version in app/build.gradle
+        id: bump
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          file="app/build.gradle"
+          bump_type="${{ github.event.inputs.bump }}"
+
+          current_version=$(grep -oP 'versionName\s+"\K[0-9]+\.[0-9]+\.[0-9]+' "$file" | head -n1)
+          current_code=$(grep -oP 'versionCode\s+\K[0-9]+' "$file" | head -n1)
+
+          if [ -z "${current_version}" ] || [ -z "${current_code}" ]; then
+            echo "Cannot parse versionName/versionCode from ${file}"
+            exit 1
+          fi
+
+          IFS='.' read -r major minor patch <<< "$current_version"
+
+          case "$bump_type" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+            *)
+              echo "Unsupported bump type: ${bump_type}"
+              exit 1
+              ;;
+          esac
+
+          new_version="${major}.${minor}.${patch}"
+          new_code=$((current_code + 1))
+          new_tag="v${new_version}"
+
+          if git rev-parse -q --verify "refs/tags/${new_tag}" >/dev/null; then
+            echo "Tag already exists: ${new_tag}"
+            exit 1
+          fi
+
+          sed -i -E "0,/versionCode[[:space:]]+[0-9]+/s//versionCode ${new_code}/" "$file"
+          sed -i -E "0,/versionName[[:space:]]+\"[0-9]+\.[0-9]+\.[0-9]+\"/s//versionName \"${new_version}\"/" "$file"
+
+          echo "new_version=${new_version}" >> "$GITHUB_OUTPUT"
+          echo "new_code=${new_code}" >> "$GITHUB_OUTPUT"
+          echo "new_tag=${new_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add app/build.gradle
+
+          if git diff --cached --quiet; then
+            echo "No version changes detected"
+            exit 1
+          fi
+
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Create and push tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git tag "${{ steps.bump.outputs.new_tag }}"
+          git push origin "${{ steps.bump.outputs.new_tag }}"
