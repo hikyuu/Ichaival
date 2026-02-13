@@ -166,6 +166,33 @@ fun getImageFormat(imageFile: File) : ImageFormat? {
     }
 }
 
+private fun ByteArray.isAscii(offset: Int, value: String) : Boolean {
+    if (size < offset + value.length)
+        return false
+
+    for (index in value.indices) {
+        if (this[offset + index].toInt().toChar() != value[index])
+            return false
+    }
+    return true
+}
+
+fun isAnimatedWebp(imageFile: File) : Boolean {
+    val header = ByteArray(32)
+    val bytesRead = imageFile.inputStream().use { it.read(header) }
+    if (bytesRead < header.size)
+        return false
+
+    if (!header.isAscii(0, "RIFF") || !header.isAscii(8, "WEBP") || !header.isAscii(12, "VP8X"))
+        return false
+
+    return (header[20].toInt() and 0x02) != 0
+}
+
+fun isAnimatedImage(imageFile: File) : Boolean {
+    return getImageFormat(imageFile) == ImageFormat.GIF || isAnimatedWebp(imageFile)
+}
+
 fun SubsamplingScaleImageView.setDefaultScale() {
     if (!isReady)
         return
