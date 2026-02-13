@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Release: bump version + commit + tag",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/.vscode/scripts/bump-version-and-tag.ps1",
+        "-BumpType",
+        "${input:bumpType}"
+      ],
+      "group": "none",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "bumpType",
+      "type": "pickString",
+      "description": "选择版本递增类型",
+      "options": [
+        "major",
+        "minor",
+        "patch"
+      ],
+      "default": "patch"
+    }
+  ]
+}
