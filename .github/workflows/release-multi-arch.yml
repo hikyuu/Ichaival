@@ -1,0 +1,72 @@
+name: Release Multi-Arch APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      APP_NAME: Ichaival
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APKs (multi-arch)
+        run: ./gradlew app:assembleRelease -PenableAbiSplits=true
+
+      - name: Prepare renamed APKs
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oP 'versionName\s+"\K[^"]+' app/build.gradle | head -n1)
+          if [ -z "${VERSION}" ]; then
+            echo "Cannot resolve versionName from app/build.gradle"
+            exit 1
+          fi
+          mkdir -p dist
+          shopt -s nullglob
+          for apk in app/build/outputs/apk/release/*.apk; do
+            name=$(basename "$apk")
+            if [[ "$name" =~ ^app-(.+)-release(-unsigned)?\.apk$ ]]; then
+              abi="${BASH_REMATCH[1]}"
+              cp "$apk" "dist/${APP_NAME}-${abi}-${VERSION}.apk"
+            fi
+          done
+          count=$(find dist -maxdepth 1 -name '*.apk' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "No ABI split APKs found under app/build/outputs/apk/release"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-arch-apks-${{ steps.prepare.outputs.version }}
+          path: dist/*.apk
+          if-no-files-found: error
+
+      - name: Publish GitHub Release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.apk
+          generate_release_notes: true
