@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id 'com.android.application'
     id 'kotlin-android'
     id 'kotlin-parcelize'
@@ -31,8 +31,8 @@ android {
         applicationId "com.utazukin.ichaival"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 48
-        versionName "1.9.5"
+        versionCode 49
+        versionName "1.9.6"
         vectorDrawables {
             useSupportLibrary true
         }
@@ -127,3 +127,4 @@ dependencies {
     implementation "io.coil-kt.coil3:coil-network-okhttp:$coil_version"
     implementation "com.drakeet.drawer:drawer:1.0.3"
 }
+
