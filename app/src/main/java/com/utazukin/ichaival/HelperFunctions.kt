@@ -40,8 +40,6 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.hippo.image.BitmapDecoder
 import com.hippo.image.ImageInfo
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Stack
 import javax.microedition.khronos.egl.EGL10
@@ -49,21 +47,23 @@ import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.egl.EGLContext
 import kotlin.math.max
 import kotlin.math.min
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-fun getDpWidth(pxWidth: Int) : Int {
+fun getDpWidth(pxWidth: Int): Int {
     val metrics = Resources.getSystem().displayMetrics
     return (pxWidth / metrics.density).toInt()
 }
 
-fun getDpAdjusted(pxSize: Int) : Int {
+fun getDpAdjusted(pxSize: Int): Int {
     val metrics = Resources.getSystem().displayMetrics
     return (pxSize * metrics.density).toInt()
 }
 
 @Suppress("DEPRECATION")
-fun Activity.getWindowWidth() : Int {
+fun Activity.getWindowWidth(): Int {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-        windowManager.currentWindowMetrics.bounds.width()
+            windowManager.currentWindowMetrics.bounds.width()
     else {
         val metrics = DisplayMetrics()
         windowManager.defaultDisplay.getMetrics(metrics)
@@ -73,7 +73,7 @@ fun Activity.getWindowWidth() : Int {
 
 data class TermInfo(val term: String, val exact: Boolean, val negative: Boolean)
 
-fun parseTermsInfo(query: CharSequence) : List<TermInfo> {
+fun parseTermsInfo(query: CharSequence): List<TermInfo> {
     val terms = mutableListOf<TermInfo>()
     val term = StringBuilder()
     val stack = Stack<Char>()
@@ -96,7 +96,7 @@ fun parseTermsInfo(query: CharSequence) : List<TermInfo> {
                 stack.pop()
                 exact = stack.empty()
             }
-            c == '\'' || c== '"' -> stack.push(c)
+            c == '\'' || c == '"' -> stack.push(c)
             c == ' ' && stack.empty() -> {
                 terms.add(TermInfo(term.toString(), exact, negative))
                 term.clear()
@@ -109,11 +109,9 @@ fun parseTermsInfo(query: CharSequence) : List<TermInfo> {
         }
     }
 
-    while (!stack.empty())
-        term.append(stack.pop())
+    while (!stack.empty()) term.append(stack.pop())
 
-    if (term.isNotEmpty())
-        terms.add(TermInfo(term.toString(), exact, negative))
+    if (term.isNotEmpty()) terms.add(TermInfo(term.toString(), exact, negative))
 
     return terms
 }
@@ -122,80 +120,76 @@ fun parseTerms(query: CharSequence) = parseTermsInfo(query).map { it.term }
 
 private fun <T> Stack<T>.peekOrNull() = if (empty()) null else peek()
 
-fun SharedPreferences.castStringPrefToInt(pref: String, defaultValue: Int = 0) : Int {
+fun SharedPreferences.castStringPrefToInt(pref: String, defaultValue: Int = 0): Int {
     val stringPref = getString(pref, null)
     return if (stringPref.isNullOrBlank()) defaultValue else stringPref.toInt()
 }
 
-fun SharedPreferences.castStringPrefToLong(pref: String, defaultValue: Long = 0) : Long {
+fun SharedPreferences.castStringPrefToLong(pref: String, defaultValue: Long = 0): Long {
     val stringPref = getString(pref, null)
     return if (stringPref.isNullOrBlank()) defaultValue else stringPref.toLong()
 }
 
-fun SharedPreferences.castStringPrefToFloat(pref: String, defaultValue: Float = 0f) : Float {
+fun SharedPreferences.castStringPrefToFloat(pref: String, defaultValue: Float = 0f): Float {
     val stringPref = getString(pref, null)
     return if (stringPref.isNullOrBlank()) defaultValue else stringPref.toFloat()
 }
 
-fun Context.getCustomTheme() : String {
+fun Context.getCustomTheme(): String {
     val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-    return prefs.getString(getString(R.string.theme_pref), getString(R.string.dark_theme)).toString()
+    return prefs.getString(getString(R.string.theme_pref), getString(R.string.dark_theme))
+            .toString()
 }
 
-fun JsonObject.getOrNull(memberName: String) : JsonElement? {
+fun JsonObject.getOrNull(memberName: String): JsonElement? {
     val member = get(memberName)
     return if (member?.isJsonNull != false) null else member
 }
 
 fun <T> MutableList<T>.removeRange(start: Int, count: Int) {
     var i = min(start + count, size - 1)
-    while (i >= 0 && i >= start)
-        removeAt(i--)
+    while (i >= 0 && i >= start) removeAt(i--)
 }
 
 val BitmapFactory.Options.outSize: Size
     get() = Size(outWidth, outHeight)
 
-fun getImageFormat(imageFile: File) : ImageFormat? {
+fun getImageFormat(imageFile: File): ImageFormat? {
     val info = ImageInfo()
     return imageFile.inputStream().use {
-        if (BitmapDecoder.decode(it, info))
-            ImageFormat.fromInt(info.format)
-        else
-            null
+        if (BitmapDecoder.decode(it, info)) ImageFormat.fromInt(info.format) else null
     }
 }
 
-private fun ByteArray.isAscii(offset: Int, value: String) : Boolean {
-    if (size < offset + value.length)
-        return false
+private fun ByteArray.isAscii(offset: Int, value: String): Boolean {
+    if (size < offset + value.length) return false
 
     for (index in value.indices) {
-        if (this[offset + index].toInt().toChar() != value[index])
-            return false
+        if (this[offset + index].toInt().toChar() != value[index]) return false
     }
     return true
 }
 
-fun isAnimatedWebp(imageFile: File) : Boolean {
+fun isSupportedAnimatedWebp(imageFile: File): Boolean {
+    // Only Android 9+ (API 28) natively supports animated webp
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
+
     val header = ByteArray(32)
     val bytesRead = imageFile.inputStream().use { it.read(header) }
-    if (bytesRead < header.size)
-        return false
+    if (bytesRead < header.size) return false
 
     if (!header.isAscii(0, "RIFF") || !header.isAscii(8, "WEBP") || !header.isAscii(12, "VP8X"))
-        return false
+            return false
 
     return (header[20].toInt() and 0x02) != 0
 }
 
-fun isAnimatedImage(imageFile: File) : Boolean {
-    return getImageFormat(imageFile) == ImageFormat.GIF || isAnimatedWebp(imageFile)
+fun isAnimatedImage(imageFile: File): Boolean {
+    return getImageFormat(imageFile) == ImageFormat.GIF || isSupportedAnimatedWebp(imageFile)
 }
 
 fun SubsamplingScaleImageView.setDefaultScale() {
-    if (!isReady)
-        return
+    if (!isReady) return
 
     val avgScale = (width + height) / 2f
     val imgScale = (sWidth + sHeight) / 2f
@@ -209,24 +203,25 @@ fun SubsamplingScaleImageView.setDefaultScale() {
 
 fun isLocalFile(path: String) = path.startsWith("/data")
 
-fun ImageLoader.createGifLoader() : ImageLoader {
-    return newBuilder().components {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-            add(AnimatedImageDecoder.Factory())
-        else
-            add(GifDecoder.Factory())
-    }.build()
+fun ImageLoader.createGifLoader(): ImageLoader {
+    return newBuilder()
+            .components {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                        add(AnimatedImageDecoder.Factory())
+                else add(GifDecoder.Factory())
+            }
+            .build()
 }
 
-val ImageLoader.diskCacheSize get() = diskCache?.size ?: 0
+val ImageLoader.diskCacheSize
+    get() = diskCache?.size ?: 0
 
 fun ImageLoader.clearDiskCache() = diskCache?.clear()
 
-suspend fun ImageLoader.cacheOrGet(request: ImageRequest) : File? {
+suspend fun ImageLoader.cacheOrGet(request: ImageRequest): File? {
     return withContext(Dispatchers.IO) {
         val cache = diskCache?.openSnapshot(request.data as String)?.use { it.data.toFile() }
-        if (cache != null)
-            cache
+        if (cache != null) cache
         else {
             execute(request)
             diskCache?.openSnapshot(request.data as String)?.use { it.data.toFile() }
@@ -234,18 +229,25 @@ suspend fun ImageLoader.cacheOrGet(request: ImageRequest) : File? {
     }
 }
 
-fun downloadCoilImageWithProgress(context: Context, imagePath: String, uiProgressListener: (Int) -> Unit) : ImageRequest {
-    return downloadCoilImageWithProgress(context, imagePath, object: UIProgressListener {
-        override fun update(progress: Int) {
-            uiProgressListener(progress)
-        }
-    })
+fun downloadCoilImageWithProgress(
+        context: Context,
+        imagePath: String,
+        uiProgressListener: (Int) -> Unit
+): ImageRequest {
+    return downloadCoilImageWithProgress(
+            context,
+            imagePath,
+            object : UIProgressListener {
+                override fun update(progress: Int) {
+                    uiProgressListener(progress)
+                }
+            }
+    )
 }
 
-fun ImageRequest.Builder.addAuthHeader() : ImageRequest.Builder {
+fun ImageRequest.Builder.addAuthHeader(): ImageRequest.Builder {
     val headers = NetworkHeaders.Builder()
-    if (WebHandler.apiKey.isNotEmpty())
-        headers["Authorization"] = WebHandler.apiKey
+    if (WebHandler.apiKey.isNotEmpty()) headers["Authorization"] = WebHandler.apiKey
 
     for ((name, value) in WebHandler.customHeaders) {
         headers[name] = value
@@ -254,36 +256,42 @@ fun ImageRequest.Builder.addAuthHeader() : ImageRequest.Builder {
     return this.httpHeaders(headers.build())
 }
 
-private fun downloadCoilImageWithProgress(context: Context, imagePath: String, uiProgressListener: UIProgressListener) : ImageRequest {
-    return ImageRequest.Builder(context).apply {
-        addAuthHeader()
-        data(imagePath)
-        memoryCachePolicy(CachePolicy.DISABLED)
-        listener(
-                onStart = { ResponseProgressListener.expect(imagePath, uiProgressListener) },
-                onCancel = { ResponseProgressListener.forget(imagePath) },
-                onError = { _, _ -> ResponseProgressListener.forget(imagePath) }
-        )
-    }.build()
+private fun downloadCoilImageWithProgress(
+        context: Context,
+        imagePath: String,
+        uiProgressListener: UIProgressListener
+): ImageRequest {
+    return ImageRequest.Builder(context)
+            .apply {
+                addAuthHeader()
+                data(imagePath)
+                memoryCachePolicy(CachePolicy.DISABLED)
+                listener(
+                        onStart = {
+                            ResponseProgressListener.expect(imagePath, uiProgressListener)
+                        },
+                        onCancel = { ResponseProgressListener.forget(imagePath) },
+                        onError = { _, _ -> ResponseProgressListener.forget(imagePath) }
+                )
+            }
+            .build()
 }
 
 fun Size.toRect() = Rect(0, 0, width, height)
 
-inline fun <T> tryOrNull(body: () -> T) : T? {
+inline fun <T> tryOrNull(body: () -> T): T? {
     return try {
         body()
-    }
-    catch (e: Exception) {
+    } catch (e: Exception) {
         null
     }
 }
 
 private var mMaxTextureSize = -1
-//Converted to Kotlin from
-//https://stackoverflow.com/questions/7428996/hw-accelerated-activity-how-to-get-opengl-texture-size-limit/26823288#26823288
-fun getMaxTextureSize() : Int {
-    if (mMaxTextureSize > 0)
-        return mMaxTextureSize
+// Converted to Kotlin from
+// https://stackoverflow.com/questions/7428996/hw-accelerated-activity-how-to-get-opengl-texture-size-limit/26823288#26823288
+fun getMaxTextureSize(): Int {
+    if (mMaxTextureSize > 0) return mMaxTextureSize
 
     val IMAGE_MAX_BITMAP_DIMENSION = 2048
     val egl: EGL10 = EGLContext.getEGL() as EGL10
@@ -304,8 +312,7 @@ fun getMaxTextureSize() : Int {
     for (configuration in configurationsList) {
         egl.eglGetConfigAttrib(display, configuration, EGL10.EGL_MAX_PBUFFER_WIDTH, textureSize)
 
-        if (maxTextureSize < textureSize[0])
-            maxTextureSize = textureSize[0]
+        if (maxTextureSize < textureSize[0]) maxTextureSize = textureSize[0]
     }
 
     egl.eglTerminate(display)
