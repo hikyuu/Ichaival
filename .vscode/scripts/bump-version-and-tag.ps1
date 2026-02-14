@@ -83,6 +83,11 @@ if ($LASTEXITCODE -ne 0) {
     throw 'git commit 执行失败'
 }
 
+& git push
+if ($LASTEXITCODE -ne 0) {
+    throw 'git push commit 执行失败'
+}
+
 & git tag $newTag
 if ($LASTEXITCODE -ne 0) {
     throw 'git tag 执行失败'

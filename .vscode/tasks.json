@@ -3,15 +3,10 @@
   "tasks": [
     {
       "label": "Release: bump version + commit + tag",
-      "type": "shell",
-      "command": "powershell",
+      "type": "process",
+      "command": "C:/Program Files/Git/bin/bash.exe",
       "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/.vscode/scripts/bump-version-and-tag.ps1",
-        "-BumpType",
+        "${workspaceFolder}/.vscode/scripts/bump-version-and-tag.sh",
         "${input:bumpType}"
       ],
       "group": "none",
