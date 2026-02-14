@@ -177,7 +177,10 @@ private fun ByteArray.isAscii(offset: Int, value: String) : Boolean {
     return true
 }
 
-fun isAnimatedWebp(imageFile: File) : Boolean {
+fun isSupportedAnimatedWebp(imageFile: File) : Boolean {
+    // Only Android 9+ (API 28) natively supports animated webp
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
+
     val header = ByteArray(32)
     val bytesRead = imageFile.inputStream().use { it.read(header) }
     if (bytesRead < header.size)
@@ -190,7 +193,7 @@ fun isAnimatedWebp(imageFile: File) : Boolean {
 }
 
 fun isAnimatedImage(imageFile: File) : Boolean {
-    return getImageFormat(imageFile) == ImageFormat.GIF || isAnimatedWebp(imageFile)
+    return getImageFormat(imageFile) == ImageFormat.GIF || isSupportedAnimatedWebp(imageFile)
 }
 
 fun SubsamplingScaleImageView.setDefaultScale() {
